@@ -1,0 +1,110 @@
+Question 1:
+edate, starttime -> duration, URL, description, host
+edate, starttime, panelistname -> panelistemail
+participantid -> participantname, participantemail, participantaddress
+edate, starttime, participantid -> ticketprice
+
+NOT in BCNF,  edate, starttime -> duration, URL, description, host violates our rules. (LHF is not a superkey and this relation is not trivial)
+NOT in 3NF, edate, starttime -> duration, URL, description, host violates our rules. (RHS is not a prime attribute)
+
+Question 2:
+F = {AC -> D, AC -> E, BE -> F, AFG -> B}
+R1(A,B,C,F,G)    F1 = {AFG -> B}
+R2(A,B,C,D,E)    F2 = {AC -> D, AC -> E}
+F1 Union F2 = {AFG -> B, AC -> D, AC -> E}
+From the result F1 Union F2, we can see that relation BE -> F hs missing, thus, we can conclude that this decomposition is not dependency preserving.
+
+Question 3:
+F = {AC -> BD, BC -> E, BE -> DF, AG -> EB}
+R1(A,B,C,D)
+R2(A,B,C,E,G)
+R3(B,E,F)
+R4(A,G,E)
+
+A,  B,  C,  D,  E1, F1, G1
+A,  B,  C,  D1, E,  F2, G
+A1, B,  C1, D2, E,  F,  G2
+A,  B1, C2, D3, E,  F3, G
+
+AC -> BD
+A,  B,  C,  D,  E1, F1, G1
+A,  B,  C,  D,  E,  F2, G
+A1, B,  C1, D2, E,  F,  G2
+A,  B1, C2, D3, E,  F3, G
+
+BC -> E
+A,  B,  C,  D,  E,  F1, G1
+A,  B,  C,  D,  E,  F2, G
+A1, B,  C1, D2, E,  F,  G2
+A,  B1, C2, D3, E,  F3, G
+
+BE -> DF
+A,  B,  C,  D,  E,  F,  G1
+A,  B,  C,  D,  E,  F,  G
+A1, B,  C1, D2, E,  F,  G2
+A,  B1, C2, D3, E,  F3, G
+
+Since we have cleared everything unknown in row2, we can conclude that this decomposition is lossless.
+
+Question 4:
+F = {AD -> CE, C -> D, BEF -> G, AG -> G}
+(a) ABFGH, ABCFH, ABDFH, ABEFH 
+It is in 3NF since our RHS are all prime attributes.
+
+(b) Done
+
+(c) Done
+
+Question 5:
+F = {AC -> BD, BC -> BE, ABC -> E}
+
+Step1:
+F = {AC -> B, AC -> D,BC -> B, BC -> E, ABC -> E}
+
+Step2:
+F = {AC -> B, AC -> D, BC -> E, ABC -> E}
+
+Step3:
+F = {AC -> B, AC -> D, BC -> E}
+
+Final Result:
+F = {AC -> B, AC -> D, BC -> E}
+
+Question 6:
+Key: oname, mid
+
+If we go through all relations, we find out that all of them violate BCNF.
+Thus, we need to craete two new relation instead of R:
+R1 = {cname df url email}
+R2 = {cname mid mname oname opositon}
+
+BCNF check:
+R1 satisfies BCNF              F1 = {cname -> df url email}
+R2 does not satisfies BCNF     F2 = {cname mid -> mname, oname -> oposition, oname -> cname}
+
+Since R2 does not satisfy BCNF, we have to decomposte it as previous one.
+R21 = {cname mid mname}             F1 = {cname mid -> mname}
+R22 = {cname mid oname oposition}   F2 = {oname -> oposition, oname -> cname}
+
+BCNF check:
+R21 satisfies BCNF             F21 = {cname mid -> mname}
+R22 does not satisfies BCNF    F22 = {oname -> oposition, oname -> cname}
+
+Since R22 does not satisfy BCNF, we have to decomposte it as previous one.
+R221 = {oname oposition cname}       F221 = {oname -> oposition, oname -> cname}
+R222 = {mid oname}                   F222 = {}
+
+BCNF check:
+R221 satisfies BCNF             F221 = {oname -> oposition, oname -> cname}
+R222 does not satisfies BCNF    F222 = {}
+
+Thus:
+R1 = {cname df url email}
+R21 = {cname mid mname}    
+R221 = {oname oposition cname}
+R222 = {mid oname}
+
+
+Question 1 (4)
+
+Question 6. what to expect to prove the lossy decomposition?

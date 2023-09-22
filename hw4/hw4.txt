@@ -1,0 +1,220 @@
+1.
+SELECT
+    s.title, sd.director
+FROM
+    series s, seriesdirectors sd
+WHERE
+    s.seasons >= 15
+    and s.imdbrating < 5
+    and s.seriesid = sd.seriesid
+ORDER BY
+    s.title, sd.director asc;
+    
+2.
+SELECT DISTINCT
+    count(m.movieid) as nummovies
+FROM
+    movies m
+WHERE
+    m.imdbrating is NULL and m.rottentomatoes is NULL and (m.year > 2015 or m.year is NULL)
+
+
+3.
+SELECT DISTINCT
+    m.title, md.director
+FROM
+    movies m
+    ,movieslanguages ml1
+    ,movieslanguages ml2
+    ,moviesgenres mg
+    ,moviesdirectors md
+WHERE
+    md.movieid = m.movieid
+    and ml1.movieid = m.movieid
+    and mg.movieid = m.movieid
+    and m.imdbrating >= 8
+    and ml1.movieid = ml2.movieid
+    and ml1.language = 'English'
+    and NOT ml2.language = 'English'
+    and (mg.genre = 'Action' or mg.genre = 'Sci-F1' or mg.genre = 'Adventure' or mg.genre = 'Drama') 
+ORDER BY
+    m.title asc
+    , md.director asc;
+
+4.
+(SELECT
+    m.movieid as id, m.title, 'movie' as streamingtype
+FROM
+    movies m
+    ,moviescountry mc
+WHERE
+    m.movieid = mc.movieid
+
+EXCEPT
+
+SELECT
+    m.movieid as id, m.title, 'movie' as streamingtype
+FROM
+    movies m
+    ,moviescountry mc
+WHERE
+    m.movieid = mc.movieid
+    and NOT mc.country = 'Italy')
+
+UNION
+
+(SELECT
+    s.seriesid as id, s.title, 'series' as streamingtype
+FROM
+    series s
+    ,seriescountry sc
+WHERE
+    s.seriesid = sc.seriesid
+
+EXCEPT
+
+SELECT
+    s.seriesid as id, s.title, 'series' as streamingtype
+FROM
+    series s
+    ,seriescountry sc
+WHERE
+    s.seriesid = sc.seriesid
+    and NOT sc.country = 'Italy')
+
+ORDER BY
+    title DESC, streamingtype DESC;
+
+
+
+5.
+SELECT
+    count(m) as numtuples
+    , count(m.date_added) as numdate
+    , min(m.year) as minyear
+    , max(m.year) as maxyear
+    , avg(RTRIM(duration, 'min')::numeric(5,2)) as avgduration
+    , avg(m.imdbrating) as avgrating
+FROM
+    movies m;
+
+6.
+SELECT DISTINCT
+    mc.castname 
+    , count(DISTINCT mg.movieid) as nummovies
+    , count(DISTINCT sg.seriesid) as numseries
+FROM
+    moviescast mc
+    , seriescast sc
+    , moviesgenres mg
+    , seriesgenres sg
+WHERE
+    sc.seriesid = sg.seriesid
+    and mc.movieid = mg.movieid
+    and mc.castname = sc.castname
+    and mg.genre = sg.genre
+    and (mg.genre = 'Mystery' or mg.genre = 'Thriller')
+GROUP BY
+    mc.castname
+ORDER BY
+    nummovies asc
+    , numseries asc
+    , mc.castname asc;
+
+7.
+SELECT
+    s1.title1 as title
+    , count(DISTINCT sc.country) as numcountries
+    , count(DISTINCT sp.platform) as numplatforms
+FROM
+(SELECT DISTINCT
+    s.title as title1
+    , s.seriesid as seriesid1
+FROM
+    series s
+    , seriescountry sc
+WHERE
+    sc.seriesid = s.seriesid
+GROUP BY
+    s.seriesid
+HAVING
+    count(*) >= 3) as s1
+    , series s
+    , seriesonplatform sp
+    , seriescountry sc
+WHERE
+    sp.seriesid = s1.seriesid1
+    and sp.seriesid = sc.seriesid
+    and sc.seriesid = s.seriesid
+GROUP BY
+    s1.title1
+ORDER BY
+    numcountries DESC
+    , s1.title1 ASC;
+
+8.
+SELECT
+    languages.language
+    , min(m.imdbrating) as minimdb
+    , max(m.imdbrating) as maximdb
+    , min(m.rottentomatoes) as minrotten
+    , max(m.rottentomatoes) as maxrotten
+FROM 
+(SELECT
+    ml.language as language
+FROM
+    movieslanguages ml
+GROUP BY
+    ml.language
+HAVING
+    count(*) >= 10) as languages
+    , movies m
+    , movieslanguages ml
+WHERE
+    m.movieid = ml.movieid
+     and languages.language = ml.language
+GROUP BY
+    languages.language
+ORDER BY
+    minimdb asc,
+    minrotten asc;
+
+9.
+SELECT
+   sp2.platform
+   , count(sp1.seriesid) as numseries
+FROM
+    seriesonplatform sp1,
+    seriesonplatform sp2
+WHERE 
+    sp1.seriesid = sp2.seriesid
+    and sp1.platform = 'fuboTV'
+    and sp2.platform <> 'fuboTV'
+GROUP BY
+    sp2.platform
+ORDER BY
+    numseries DESC
+    , sp2.platform ASC;
+
+10.
+SELECT
+    mc.castname
+FROM
+    movies m
+    , moviescast mc
+    , moviesdirectors md
+
+WHERE
+    mc.movieid = m.movieid
+    and m.date_added > '1/1/2019'
+    and md.director = mc.castname
+
+EXCEPT
+
+SELECT
+    sc.castname
+FROM
+    seriescast sc
+
+ORDER BY
+    castname ASC;

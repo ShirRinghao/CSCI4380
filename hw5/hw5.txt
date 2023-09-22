@@ -1,0 +1,236 @@
+1.
+SELECT
+    md.director
+FROM
+    moviesdirectors md
+WHERE
+    md.director <> 'Steven Spielberg'
+GROUP BY
+    md.director
+HAVING
+    Count(DISTINCT md.movieid) = (SELECT
+                                      Count(DISTINCT md.movieid) as num
+                                  FROM
+                                      moviesdirectors md
+				  WHERE
+				      md.director = 'Steven Spielberg')
+ORDER BY
+    md.director;
+
+2.
+
+SELECT
+    scoun.country
+    , Count(DISTINCT scat.seriesid) as numseries
+FROM
+    seriescountry scoun left join
+    seriescategory scat
+    on scoun.seriesid = scat.seriesid and scat.category = 'TV Comedies'
+GROUP BY
+    scoun.country
+ORDER BY
+    numseries desc, scoun.country asc;
+
+
+3.
+SELECT
+    result.language, result.num
+FROM
+    (SELECT
+        ml.language
+        , Count(DISTINCT ml.movieid) as num
+    FROM
+        movieslanguages ml
+    GROUP BY
+        ml.language
+    ORDER BY
+        count(ml.movieid) desc
+        , ml.language asc
+    LIMIT 26 OFFSET 14) as result
+ORDER BY
+    result.num asc, result.language asc;
+
+
+4.
+SELECT
+    m.title, count(ml.language) as numlanguages
+FROM
+    movies m
+    , movieslanguages ml
+WHERE
+    ml.movieid = m.movieid
+GROUP BY
+    m.title
+HAVING
+    Count(ml.language) >= ALL (SELECT
+        		           count(ml.movieid) as nummovies
+    			       FROM
+			           movies m
+        		           , movieslanguages ml
+			       WHERE
+				   m.movieid = ml.movieid
+    			       GROUP BY
+        		           ml.movieid)
+ORDER BY
+    m.title asc;
+
+5.
+SELECT
+    before.avgbefore
+    , after.avgafter
+    , (before.avgbefore - after.avgafter)::NUMERIC(5,2) as avgafter
+FROM
+
+(SELECT				-- subquery finds avgbefore 2000
+    avg(m.imdbrating)::NUMERIC(5,2) as avgbefore
+FROM
+    movies m
+    , moviesgenres mg
+WHERE
+    m.movieid = mg.movieid
+    and lower(mg.genre) = 'horror'
+    and m.year < 2000) as before
+
+, (SELECT			-- subquery finds avgafter 2000
+    avg(m.imdbrating)::NUMERIC(5,2) as avgafter
+FROM
+    movies m
+    , moviesgenres mg
+WHERE
+    m.movieid = mg.movieid
+    and lower(mg.genre) = 'horror'
+    and m.year > 2000) as after
+
+6.
+SELECT
+    sc.country, s.title, s.imdbrating
+FROM
+    series s
+    , seriescountry sc
+WHERE
+    s.seriesid = sc.seriesid
+    and s.imdbrating >= 7.5
+    and s.seriesid NOT IN (SELECT      -- subquery finds all series not in those six countries
+    			      sc.seriesid
+			  FROM
+    			      seriescountry sc
+		          WHERE
+    			      sc.country NOT IN ('Turkey', 'France', 'China', 'India', 'Thailand', 'Japan'))
+			      and s.seriesid NOT IN(select sc.seriesid from seriescountry sc group by sc.seriesid having count(*)>1)
+ORDER BY
+    sc.country asc, s.imdbrating asc, s.title asc;
+
+
+7.
+
+WITH 
+ids as (SELECT DISTINCT                 -- find series that are only available in one country
+	    s.seriesid as id
+	FROM
+	    series s,
+	    seriescountry sc
+	WHERE
+	    s.seriesid = sc.seriesid
+	    AND s.seriesid NOT IN
+	    (SELECT                     -- subquery finds all series not in US
+	         sc.seriesid
+	     FROM
+		 seriescountry sc
+	     WHERE
+		 lower(sc.country) LIKE '%united states%')
+	GROUP BY
+	    s.seriesid
+	HAVING count(sc.country) = 1),
+
+rate AS( SELECT                         -- subquery finds the best rating for series not in US
+	     sc.country as c
+	     , MAX(s.imdbrating) as max
+	 FROM
+	     ids
+	     , series s
+	     , seriescountry sc
+	 WHERE
+	     sc.seriesid = s.seriesid
+	     and s.seriesid = ids.id
+	 GROUP BY
+	     sc.country)
+
+SELECT
+    sc.country
+    ,s.title
+    , s.imdbrating
+FROM
+    ids
+    , rate
+    , seriescountry sc
+    , series s
+WHERE 
+    sc.seriesid = s.seriesid
+    and ids.id = s.seriesid
+    and sc.country = rate.c
+    and rate.max = s.imdbrating
+ORDER BY
+    sc.country asc
+    , s.title asc;
+    
+8.
+SELECT
+    coms.s1 as platform1
+    , coms.s2 as platform2
+    , (coms.conum::float/(plat1.p1num))::numeric(5,2) as numcommon
+FROM
+    (SELECT                           -- platform 1 for later computation
+         sp.platform as p1
+	 , count(DISTINCT sp.seriesid) as p1num
+     FROM
+	 seriesonplatform sp
+     GROUP BY
+	 sp.platform) as plat1
+
+     , (SELECT                        -- platform 2 for later computation
+	    sp.platform as p2
+	    , count(DISTINCT sp.seriesid) as p2num
+        FROM
+	    seriesonplatform sp
+	GROUP BY
+	    sp.platform) as plat2
+
+     , (SELECT                        -- Subquery counts all the common ones
+	    sp1.platform as s1
+	    , sp2.platform as s2
+	    , count(*) as conum
+	FROM
+	    seriesonplatform sp1
+	    , seriesonplatform sp2
+        WHERE
+	    sp1.seriesid = sp2.seriesid
+	    and sp1.platform <> sp2.platform
+        GROUP BY
+	    sp1.platform,sp2.platform) as coms
+WHERE
+    coms.conum/plat1.p1num::float > 0.6
+    and plat1.p1 = coms.s1
+    and plat2.p2 = coms.s2
+ORDER BY
+    platform1
+    , platform2
+    , numcommon;
+
+9.
+SELECT DISTINCT
+    mc.castname
+FROM
+    moviescast mc
+    , moviesdirectors md1
+    , moviesdirectors md2
+WHERE
+    mc.castname NOT IN (SELECT director FROM moviesdirectors)
+    and md1.movieid = mc.movieid
+    and md2.movieid = mc.movieid
+    and	md1.director = md2.director
+GROUP BY
+    mc.castname, md1.director
+HAVING 
+    count(mc.movieid) >2
+ORDER BY
+    mc.castname asc;
